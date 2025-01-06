@@ -1,85 +1,97 @@
-﻿using ITBees.FAS.Payments.Interfaces.Models;
+﻿using ITBees.FAS.Payments.Controllers.Operator;
+using ITBees.FAS.Payments.Interfaces.Models;
 using Newtonsoft.Json;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace ITBees.SaldeoIntegration;
 
 public class ExcelGenerator
 {
-    public static void GenerateExcelReport(List<FinishedPaymentVm> payments, string filePath)
+    ExcelGenerator()
     {
-        using (var package = new ExcelPackage())
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+    }
+    
+    public static void InsertDataIntoTemplate(
+        List<FinishedPaymentVm> payments,
+        string templateFilePath,
+        string outputFilePath, string invoiceSufffix)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        // Load the existing Excel file from disk
+        FileInfo templateFile = new FileInfo(templateFilePath);
+
+        // IMPORTANT: License context for EPPlus, if needed:
+        // ExcelPackage.LicenseContext = LicenseContext.NonCommercial; 
+        // (uncomment if you're not using an official commercial license)
+
+        using (var package = new ExcelPackage(templateFile))
         {
-            var worksheet = package.Workbook.Worksheets.Add("Faktury");
+            // Try to get the worksheet named "Faktury" (or "Sheet1" if you prefer)
+            var worksheet = package.Workbook.Worksheets["Faktury"]
+                            ?? package.Workbook.Worksheets[0];
 
-            // Headers (Polish column names)
-            worksheet.Cells[1, 1].Value = "Lp.";
-            worksheet.Cells[1, 2].Value = "Sufiks";
-            worksheet.Cells[1, 3].Value = "Własny opis faktury";
-            worksheet.Cells[1, 4].Value = "Metoda kasowa";
-            worksheet.Cells[1, 5].Value = "VAT marża";
-            worksheet.Cells[1, 6].Value = "Data wystawienia";
-            worksheet.Cells[1, 7].Value = "Data dostawy";
-            worksheet.Cells[1, 8].Value = "Termin płatności";
-            worksheet.Cells[1, 9].Value = "Nabywca (nazwa skrócona kontrahenta)";
-            worksheet.Cells[1, 10].Value = "Nazwa pełna kontrahenta";
-            worksheet.Cells[1, 11].Value = "Adres";
-            worksheet.Cells[1, 12].Value = "Kod pocztowy";
-            worksheet.Cells[1, 13].Value = "Miejscowość";
-            worksheet.Cells[1, 14].Value = "NIP";
-            worksheet.Cells[1, 15].Value = "REGON";
-            worksheet.Cells[1, 16].Value = "Kraj - skrót kraju w formacie ISO";
-            worksheet.Cells[1, 17].Value = "Adres e-mail";
-            worksheet.Cells[1, 18].Value = "Odbiorca (nazwa skrócona kontrahenta)";
-            worksheet.Cells[1, 19].Value = "Nazwa pełna (odbiorcy)";
-            worksheet.Cells[1, 20].Value = "Adres (odbiorcy)";
-            worksheet.Cells[1, 21].Value = "Kod pocztowy (odbiorcy)";
-            worksheet.Cells[1, 22].Value = "Miejscowość (odbiorcy)";
-            worksheet.Cells[1, 23].Value = "NIP (odbiorcy)";
-            worksheet.Cells[1, 24].Value = "REGON (odbiorcy)";
-            worksheet.Cells[1, 25].Value = "Kraj - skrót kraju w formacie ISO (odbiorcy)";
-            worksheet.Cells[1, 26].Value = "Adres e-mail (odbiorcy)";
-            worksheet.Cells[1, 27].Value = "Waluta";
-            worksheet.Cells[1, 28].Value = "Nazwa towaru";
-            worksheet.Cells[1, 29].Value = "PKWiU";
-            worksheet.Cells[1, 30].Value = "Ilość";
-            worksheet.Cells[1, 31].Value = "Jednostka";
-            worksheet.Cells[1, 32].Value = "Cena jedn. netto";
-            worksheet.Cells[1, 33].Value = "Cena jedn. brutto";
-            worksheet.Cells[1, 34].Value = "Stawka VAT";
-            worksheet.Cells[1, 35].Value = "Forma płatności";
-            worksheet.Cells[1, 36].Value = "Konto bankowe";
-            worksheet.Cells[1, 37].Value = "Uwagi";
-            worksheet.Cells[1, 38].Value = "Wystawca faktury";
-            worksheet.Cells[1, 39].Value = "Grupa Towarowa";
+            // We assume the first row (row 1) is for headers, so data starts from row 2
+            int startRow = 2;
 
-            // Data rows
+            // Insert data row by row
             for (int i = 0; i < payments.Count; i++)
             {
                 var payment = payments[i];
-                int row = i + 2;
+                int row = startRow + i;
+
+                // Example of filling some columns 
+                // (adjust the column indices to match your template!)
                 worksheet.Cells[row, 1].Value = i + 1; // Lp.
-                worksheet.Cells[row, 9].Value = payment.CompanyName; // Nabywca (nazwa skrócona kontrahenta)
-                worksheet.Cells[row, 10].Value = payment.CompanyName; // Nazwa pełna kontrahenta
-                worksheet.Cells[row, 11].Value = payment.Street; // Adres
-                worksheet.Cells[row, 12].Value = payment.PostCode; // Kod pocztowy
-                worksheet.Cells[row, 13].Value = payment.City; // Miejscowość
+                worksheet.Cells[row, 2].Value = invoiceSufffix;
+                worksheet.Cells[row, 6].Value = payment.Created.Value.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 7].Value = payment.Created.Value.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 8].Value = payment.Created.Value.AddDays(1).ToString("yyyy-MM-dd");
+                var paymentCompanyName = payment.CompanyName.Length > 40
+                    ? payment.CompanyName.Substring(0, 39)
+                    : payment.CompanyName;
+                if (payment.InvoiceRequested == false)
+                {
+                    paymentCompanyName = payment.Email;
+                }
+                worksheet.Cells[row, 9].Value = paymentCompanyName; // Nabywca (nazwa skrócona)
+                worksheet.Cells[row, 10].Value = payment.InvoiceRequested.Value == false ? payment.Email : payment.CompanyName; // Nazwa pełna
+                worksheet.Cells[row, 11].Value = payment.InvoiceRequested.Value ? payment.Street : "Paragon" ; // Adres
+                worksheet.Cells[row, 12].Value = payment.InvoiceRequested.Value ? payment.PostCode : "00-000"; // Kod pocztowy
+                worksheet.Cells[row, 13].Value = payment.InvoiceRequested.Value ? payment.City : "Paragon"; // Miejscowość
                 worksheet.Cells[row, 14].Value = payment.Nip; // NIP
-                worksheet.Cells[row, 16].Value = payment.Country; // Kraj - skrót kraju w formacie ISO
-                worksheet.Cells[row, 17].Value = payment.Email; // Adres e-mail
+                worksheet.Cells[row, 16].Value = payment.Country; // Kraj
+                worksheet.Cells[row, 17].Value = payment.InvoiceRequested.Value ? payment.Email : string.Empty; // Adres e-mail
                 worksheet.Cells[row, 27].Value = "PLN"; // Waluta
                 worksheet.Cells[row, 28].Value = payment.InvoiceProductName; // Nazwa towaru
                 worksheet.Cells[row, 30].Value = payment.InvoiceQuantity; // Ilość
-                worksheet.Cells[row, 32].Value = payment.Amount; // Cena jedn. netto
+                worksheet.Cells[row, 31].Value = "szt"; // Cena jedn. netto
+                worksheet.Cells[row, 33].Value = payment.Amount; // Cena jedn. netto
                 worksheet.Cells[row, 34].Value = "23%"; // Stawka VAT
-                worksheet.Cells[row, 35].Value = "Przelew"; // Forma płatności
+                worksheet.Cells[row, 35].Value = "Karta kredytowa"; // Forma płatności
+                worksheet.Cells[row, 37].Value = payment.InvoiceRequested == false ? "Paragon" : string.Empty ; // Uwagi
+
+                // If you have more columns, fill them accordingly...
             }
 
-            // Auto fit columns
-            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+            // You can also format newly added rows if needed:
+            int lastDataRow = startRow + payments.Count - 1;
+            if (payments.Count > 0)
+            {
+                using (var dataRange = worksheet.Cells[startRow, 1, lastDataRow, 39])
+                {
+                    dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                    dataRange.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                }
+            }
 
-            // Save to file
-            package.SaveAs(new FileInfo(filePath));
+            // Finally, save the result to a new file (or overwrite the templateFile if you want)
+            FileInfo outputFile = new FileInfo(outputFilePath);
+            package.SaveAs(outputFile);
         }
     }
 
@@ -89,7 +101,7 @@ public class ExcelGenerator
         {
             var response = await httpClient.GetStringAsync(apiUrl);
             var sessions = JsonConvert.DeserializeObject<List<PaymentSession>>(response);
-            return FinishedPaymentVm.MapFromPaymentSessions(sessions);
+            return null;
         }
     }
 }
