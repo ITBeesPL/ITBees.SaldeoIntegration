@@ -8,12 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.5.2" />
-<!--    <PackageReference Include="ITBees.FAS.Payments" Version="8.0.168" />-->
+    <PackageReference Include="ITBees.FAS.Payments" Version="8.0.168" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ITBees.FAS.Payments\ITBees.FAS.Payments\ITBees.FAS.Payments.csproj" />
+<!--    <ProjectReference Include="..\..\ITBees.FAS.Payments\ITBees.FAS.Payments\ITBees.FAS.Payments.csproj" />-->
   </ItemGroup>
 
 </Project>
