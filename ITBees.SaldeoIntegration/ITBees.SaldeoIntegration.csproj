@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.5.2" />
-    <PackageReference Include="ITBees.FAS.Payments" Version="8.0.224" />
+    <PackageReference Include="ITBees.FAS.Payments" Version="8.0.225" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
