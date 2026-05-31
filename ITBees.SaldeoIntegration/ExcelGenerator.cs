@@ -35,17 +35,19 @@ public class ExcelGenerator
             // We assume the first row (row 1) is for headers, so data starts from row 2
             int startRow = 2;
 
+            var issueDate = DateTime.Now.ToString("yyyy-MM-dd");
+
             // Insert data row by row
             for (int i = 0; i < payments.Count; i++)
             {
                 var payment = payments[i];
                 int row = startRow + i;
 
-                // Example of filling some columns 
+                // Example of filling some columns
                 // (adjust the column indices to match your template!)
                 worksheet.Cells[row, 1].Value = i + 1; // Lp.
                 worksheet.Cells[row, 2].Value = invoiceSufffix;
-                worksheet.Cells[row, 6].Value = payment.Created.Value.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 6].Value = issueDate; // Data wystawienia - zawsze dzisiaj (Saldeo nie akceptuje dat z przeszłości)
                 worksheet.Cells[row, 7].Value = payment.Created.Value.ToString("yyyy-MM-dd");
                 worksheet.Cells[row, 8].Value = payment.Created.Value.AddDays(1).ToString("yyyy-MM-dd");
                 var paymentCompanyName = payment.CompanyName.Length > 40
@@ -61,7 +63,7 @@ public class ExcelGenerator
                 worksheet.Cells[row, 12].Value = payment.InvoiceRequested.Value ? payment.PostCode : "00-000"; // Kod pocztowy
                 worksheet.Cells[row, 13].Value = payment.InvoiceRequested.Value ? payment.City : "Paragon"; // Miejscowość
                 worksheet.Cells[row, 14].Value = payment.Nip; // NIP
-                worksheet.Cells[row, 16].Value = payment.Country; // Kraj
+                worksheet.Cells[row, 16].Value = "PL"; // Kraj - kontrahenci są zawsze z Polski, ISO code wymagany przez Saldeo
                 worksheet.Cells[row, 17].Value = payment.InvoiceRequested.Value ? payment.Email : string.Empty; // Adres e-mail
                 worksheet.Cells[row, 27].Value = "PLN"; // Waluta
                 worksheet.Cells[row, 28].Value = payment.InvoiceProductName; // Nazwa towaru
